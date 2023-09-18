@@ -1,2 +1,3 @@
-# beacon
-A Wormhole message relay
+# Pyth Beacon
+
+A Wormhole message relay for Pyth data
