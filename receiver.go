@@ -18,6 +18,8 @@ import (
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
 	libp2pquicreuse "github.com/libp2p/go-libp2p/p2p/transport/quicreuse"
 	"github.com/multiformats/go-multiaddr"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog/log"
 	"github.com/wormhole-foundation/wormhole/sdk/vaa"
 	"google.golang.org/protobuf/proto"
@@ -127,6 +129,11 @@ func ReceiveMessages(channel chan *vaa.VAA, networkID string, bootstrapAddrs, li
 
 	defer sub.Cancel()
 
+	messageCountMetric := promauto.NewCounter(prometheus.CounterOpts{
+		Name: "beacon_message_count",
+		Help: "Count of messages received from the p2p network",
+	})
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -157,6 +164,7 @@ func ReceiveMessages(channel chan *vaa.VAA, networkID string, bootstrapAddrs, li
 				}
 
 				channel <- vaa
+				messageCountMetric.Inc()
 
 				log.Debug().Str("id", vaa.MessageID()).Msg("Received message")
 			}

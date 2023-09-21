@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog/log"
 	"github.com/wormhole-foundation/wormhole/sdk/vaa"
 )
@@ -35,7 +37,12 @@ func WriteMessages(channel chan *vaa.VAA, natsURL string, batchSize int) {
 		}
 	}
 
-	counter := 0
+	batchCounter := 0
+
+	streamAckLatencyMetric := promauto.NewSummary(prometheus.SummaryOpts{
+		Name: "beacon_stream_ack_latency",
+		Help: "Latency (milliseconds) of batch acks from the stream server",
+	})
 
 	for message := range channel {
 		bytes, err := message.Marshal()
@@ -44,21 +51,26 @@ func WriteMessages(channel chan *vaa.VAA, natsURL string, batchSize int) {
 			log.Panic().Err(err).Str("id", message.MessageID()).Msg("Failed to marshal VAA")
 		}
 
+		// Use the signing digest of the VAA as the NATS message ID to prevent
+		// DoS against valid messages by taking advantage of stream
+		// deduplication.
+		signingDigest := message.SigningDigest().Hex()
+
 		_, err = js.PublishMsgAsync(&nats.Msg{
 			Subject: STREAM_NAME,
-			Header:  nats.Header{"Nats-Msg-Id": []string{message.MessageID()}},
+			Header:  nats.Header{"Nats-Msg-Id": []string{signingDigest}},
 			Data:    bytes,
 		})
 
 		if err != nil {
-			log.Error().Err(err).Str("id", message.MessageID()).Msg("Failed to publish message")
+			log.Error().Str("id", message.MessageID()).Str("signing_digest", signingDigest).Err(err).Msg("Failed to publish message")
 		} else {
-			log.Debug().Str("id", message.MessageID()).Msg("Published message")
+			log.Debug().Str("id", message.MessageID()).Str("signing_digest", signingDigest).Msg("Published message")
 		}
 
-		counter++
+		batchCounter++
 
-		if counter%batchSize == 0 {
+		if batchCounter%batchSize == 0 {
 			startTime := time.Now()
 
 			select {
@@ -69,7 +81,8 @@ func WriteMessages(channel chan *vaa.VAA, natsURL string, batchSize int) {
 
 			ackTime := float64(time.Since(startTime).Microseconds()) / float64(1000)
 
-			log.Info().Float64("ack_time_ms", ackTime).Msg(fmt.Sprintf("Acked %d messages", batchSize))
+			streamAckLatencyMetric.Observe(ackTime)
+			log.Debug().Float64("ack_time_ms", ackTime).Msg(fmt.Sprintf("Acked %d messages", batchSize))
 		}
 	}
 }

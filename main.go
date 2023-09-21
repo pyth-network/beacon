@@ -1,12 +1,14 @@
 package main
 
 import (
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 
 	"github.com/alecthomas/kong"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"github.com/wormhole-foundation/wormhole/sdk/vaa"
 )
@@ -19,6 +21,7 @@ var cli struct {
 	NatsURL           string   `kong:"required,env='NATS_URL',help='NATS URL to connect'"`
 	WriterBatchSize   int      `kong:"required,env='WRITER_BATCH_SIZE',default=100,help='Number of messages to batch'"`
 	LogLevel          string   `kong:"required,env='LOG_LEVEL',default=info,help='Log level'"`
+	MetricsURL        string   `kong:"required,env='METRICS_URL',default=':8081',help='Metrics URL to bind'"`
 }
 
 const STREAM_NAME = "VAAS"
@@ -34,6 +37,11 @@ func main() {
 
 	zerolog.SetGlobalLevel(logLevels[strings.ToLower(cli.LogLevel)])
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		http.ListenAndServe(cli.MetricsURL, nil)
+	}()
 
 	channel := make(chan *vaa.VAA)
 
