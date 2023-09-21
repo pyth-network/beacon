@@ -129,8 +129,8 @@ func ReceiveMessages(channel chan *vaa.VAA, networkID string, bootstrapAddrs, li
 
 	defer sub.Cancel()
 
-	messageCountMetric := promauto.NewCounter(prometheus.CounterOpts{
-		Name: "beacon_message_count",
+	messagesMetric := promauto.NewCounter(prometheus.CounterOpts{
+		Name: "beacon_messages",
 		Help: "Count of messages received from the p2p network",
 	})
 
@@ -164,7 +164,7 @@ func ReceiveMessages(channel chan *vaa.VAA, networkID string, bootstrapAddrs, li
 				}
 
 				channel <- vaa
-				messageCountMetric.Inc()
+				messagesMetric.Inc()
 
 				log.Debug().Str("id", vaa.MessageID()).Msg("Received message")
 			}
