@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 
 	gossipv1 "github.com/certusone/wormhole/node/pkg/proto/gossip/v1"
 	"github.com/libp2p/go-libp2p"
@@ -25,7 +26,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func ReceiveMessages(channel chan *vaa.VAA, networkID string, bootstrapAddrs, listenAddrs []string) {
+func ReceiveMessages(channel chan *vaa.VAA, heartbeat *Heartbeat, networkID string, bootstrapAddrs, listenAddrs []string) {
 	ctx := context.Background()
 
 	priv, _, err := crypto.GenerateKeyPair(crypto.Ed25519, -1)
@@ -163,8 +164,10 @@ func ReceiveMessages(channel chan *vaa.VAA, networkID string, bootstrapAddrs, li
 					continue
 				}
 
+				// Send message on channel, increment counter, and update heartbeat
 				channel <- vaa
 				messagesMetric.Inc()
+				heartbeat.Timestamp = time.Now().Unix()
 
 				log.Debug().Str("id", vaa.MessageID()).Msg("Received message")
 			}

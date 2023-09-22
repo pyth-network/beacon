@@ -6,10 +6,12 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/alecthomas/kong"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/wormhole-foundation/wormhole/sdk/vaa"
 )
 
@@ -22,9 +24,30 @@ var cli struct {
 	WriterBatchSize   int      `kong:"required,env='WRITER_BATCH_SIZE',default=100,help='Number of messages to batch'"`
 	LogLevel          string   `kong:"required,env='LOG_LEVEL',default=info,help='Log level'"`
 	MetricsURL        string   `kong:"required,env='METRICS_URL',default=':8081',help='Metrics URL to bind'"`
+	HeartbeatURL      string   `kong:"required,env='HEARTBEAT_URL',default=':9000',help='Heartbeat URL to bind'"`
+	HeartbeatInterval int      `kong:"required,env='HEARTBEAT_INTERVAL',default='10',help='Maximum time between heartbeats in seconds'"`
 }
 
 const STREAM_NAME = "VAAS"
+
+type Heartbeat struct {
+	// Timestamp is updated from the ReceiveMessages thread
+	Timestamp int64
+	Interval  int
+}
+
+func (h *Heartbeat) Handle(w http.ResponseWriter, r *http.Request) {
+	lastHeartbeat := time.Unix(h.Timestamp, 0)
+	interval := time.Since(lastHeartbeat)
+
+	if interval < 5*time.Second {
+		log.Debug().Dur("interval_ms", interval).Msg("Heartbeat succeeded")
+		w.WriteHeader(200)
+	} else {
+		log.Error().Dur("interval_ms", interval).Msg("Heartbeat failed")
+		w.WriteHeader(503)
+	}
+}
 
 func main() {
 	kong.Parse(&cli)
@@ -38,14 +61,23 @@ func main() {
 	zerolog.SetGlobalLevel(logLevels[strings.ToLower(cli.LogLevel)])
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
+	channel := make(chan *vaa.VAA)
+	heartbeat := &Heartbeat{0, cli.HeartbeatInterval}
+
 	go func() {
+		log.Info().Str("url", cli.MetricsURL).Msg("Starting metrics server")
 		http.Handle("/metrics", promhttp.Handler())
 		http.ListenAndServe(cli.MetricsURL, nil)
 	}()
 
-	channel := make(chan *vaa.VAA)
+	go func() {
+		log.Info().Str("url", cli.HeartbeatURL).Msg("Starting heartbeat server")
+		http.HandleFunc("/", heartbeat.Handle)
+		http.ListenAndServe(cli.HeartbeatURL, nil)
+	}()
 
-	go ReceiveMessages(channel, cli.WormholeNetworkID, cli.WormholeBootstrap, cli.WormholeListen)
+	log.Info().Msg("Starting receive/write/serve goroutines")
+	go ReceiveMessages(channel, heartbeat, cli.WormholeNetworkID, cli.WormholeBootstrap, cli.WormholeListen)
 	go WriteMessages(channel, cli.NatsURL, cli.WriterBatchSize)
 	go ServeMessages(cli.ServerURL, cli.NatsURL)
 
