@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/signal"
 	"strings"
-	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -32,12 +31,13 @@ var cli struct {
 const STREAM_NAME = "VAAS"
 
 type Heartbeat struct {
+	// Timestamp is updated from the ReceiveMessages thread
 	Timestamp int64
 	Interval  int
 }
 
 func (h *Heartbeat) Handle(w http.ResponseWriter, r *http.Request) {
-	lastHeartbeat := time.Unix(atomic.LoadInt64(&h.Timestamp), 0)
+	lastHeartbeat := time.Unix(h.Timestamp, 0)
 	interval := time.Since(lastHeartbeat)
 
 	if interval < 5*time.Second {

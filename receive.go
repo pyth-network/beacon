@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"sync/atomic"
 	"time"
 
 	gossipv1 "github.com/certusone/wormhole/node/pkg/proto/gossip/v1"
@@ -168,7 +167,7 @@ func ReceiveMessages(channel chan *vaa.VAA, heartbeat *Heartbeat, networkID stri
 				// Send message on channel, increment counter, and update heartbeat
 				channel <- vaa
 				messagesMetric.Inc()
-				atomic.StoreInt64(&heartbeat.Timestamp, time.Now().Unix())
+				heartbeat.Timestamp = time.Now().Unix()
 
 				log.Debug().Str("id", vaa.MessageID()).Msg("Received message")
 			}
