@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -32,15 +32,13 @@ var cli struct {
 const STREAM_NAME = "VAAS"
 
 type Heartbeat struct {
-	Time     time.Time
-	Interval int
-	Mutex    sync.Mutex
+	Timestamp int64
+	Interval  int
 }
 
 func (h *Heartbeat) Handle(w http.ResponseWriter, r *http.Request) {
-	h.Mutex.Lock()
-	interval := time.Since(h.Time)
-	h.Mutex.Unlock()
+	lastHeartbeat := time.Unix(atomic.LoadInt64(&h.Timestamp), 0)
+	interval := time.Since(lastHeartbeat)
 
 	if interval < 5*time.Second {
 		log.Debug().Dur("interval_ms", interval).Msg("Heartbeat succeeded")
@@ -64,7 +62,7 @@ func main() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
 	channel := make(chan *vaa.VAA)
-	heartbeat := &Heartbeat{time.Time{}, cli.HeartbeatInterval, sync.Mutex{}}
+	heartbeat := &Heartbeat{0, cli.HeartbeatInterval}
 
 	go func() {
 		log.Info().Str("url", cli.MetricsURL).Msg("Starting metrics server")
