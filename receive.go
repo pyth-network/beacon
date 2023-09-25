@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"time"
 
 	gossipv1 "github.com/certusone/wormhole/node/pkg/proto/gossip/v1"
 	"github.com/libp2p/go-libp2p"
@@ -167,7 +166,7 @@ func ReceiveMessages(channel chan *vaa.VAA, heartbeat *Heartbeat, networkID stri
 				// Send message on channel, increment counter, and update heartbeat
 				channel <- vaa
 				messagesMetric.Inc()
-				heartbeat.Timestamp = time.Now().Unix()
+				heartbeat.Timestamp = vaa.Timestamp.Unix()
 
 				log.Debug().Str("id", vaa.MessageID()).Msg("Received message")
 			}

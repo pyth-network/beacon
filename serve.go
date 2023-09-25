@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"time"
 
@@ -11,8 +12,15 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/wormhole-foundation/wormhole/sdk/vaa"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 )
+
+type filterSignedVaa struct {
+	chainId     vaa.ChainID
+	emitterAddr vaa.Address
+}
 
 type server struct {
 	spyv1.UnimplementedSpyRPCServiceServer
@@ -20,6 +28,25 @@ type server struct {
 }
 
 func (s server) SubscribeSignedVAA(req *spyv1.SubscribeSignedVAARequest, server spyv1.SpyRPCService_SubscribeSignedVAAServer) error {
+	var fi []filterSignedVaa
+	if req.Filters != nil {
+		for _, f := range req.Filters {
+			switch t := f.Filter.(type) {
+			case *spyv1.FilterEntry_EmitterFilter:
+				addr, err := vaa.StringToAddress(t.EmitterFilter.EmitterAddress)
+				if err != nil {
+					return status.Error(codes.InvalidArgument, fmt.Sprintf("failed to decode emitter address: %v", err))
+				}
+				fi = append(fi, filterSignedVaa{
+					chainId:     vaa.ChainID(t.EmitterFilter.ChainId),
+					emitterAddr: addr,
+				})
+			default:
+				return status.Error(codes.InvalidArgument, "unsupported filter type")
+			}
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 	defer cancel()
@@ -65,9 +92,28 @@ func (s server) SubscribeSignedVAA(req *spyv1.SubscribeSignedVAARequest, server 
 			continue
 		}
 
+		// Check if the VAA matches any of the filters
+		var found bool = false
+		for _, f := range fi {
+			if f.chainId == vaaMsg.EmitterChain && f.emitterAddr == vaaMsg.EmitterAddress {
+				found = true
+				break
+			}
+		}
+
+		// If we didn't find a match, and there are filters, skip this message.
+		if !found && len(fi) > 0 {
+			continue
+		}
+
 		err = server.Send(&spyv1.SubscribeSignedVAAResponse{VaaBytes: vaaBytes})
 
 		if err != nil {
+			if status.Code(err) == codes.Canceled || status.Code(err) == codes.Unavailable {
+				log.Debug().Err(err).Str("id", vaaMsg.MessageID()).Msg("Client cancelled or unexpectedly closed subscription")
+				return nil
+			}
+
 			log.Error().Err(err).Str("id", vaaMsg.MessageID()).Msg("Failed to send message to client")
 			continue
 		}
