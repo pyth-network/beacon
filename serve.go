@@ -29,21 +29,18 @@ type server struct {
 
 func (s server) SubscribeSignedVAA(req *spyv1.SubscribeSignedVAARequest, server spyv1.SpyRPCService_SubscribeSignedVAAServer) error {
 	var fi []filterSignedVaa
-	if req.Filters != nil {
-		for _, f := range req.Filters {
-			switch t := f.Filter.(type) {
-			case *spyv1.FilterEntry_EmitterFilter:
-				addr, err := vaa.StringToAddress(t.EmitterFilter.EmitterAddress)
-				if err != nil {
-					return status.Error(codes.InvalidArgument, fmt.Sprintf("failed to decode emitter address: %v", err))
-				}
-				fi = append(fi, filterSignedVaa{
-					chainId:     vaa.ChainID(t.EmitterFilter.ChainId),
-					emitterAddr: addr,
-				})
-			default:
-				return status.Error(codes.InvalidArgument, "unsupported filter type")
+	for _, f := range req.Filters {
+		if t, ok := f.Filter.(*spyv1.FilterEntry_EmitterFilter); ok {
+			addr, err := vaa.StringToAddress(t.EmitterFilter.EmitterAddress)
+			if err != nil {
+				return status.Error(codes.InvalidArgument, fmt.Sprintf("failed to decode emitter address: %v", err))
 			}
+			fi = append(fi, filterSignedVaa{
+				chainId:     vaa.ChainID(t.EmitterFilter.ChainId),
+				emitterAddr: addr,
+			})
+		} else {
+			return status.Error(codes.InvalidArgument, "unsupported filter type")
 		}
 	}
 
@@ -93,7 +90,7 @@ func (s server) SubscribeSignedVAA(req *spyv1.SubscribeSignedVAARequest, server 
 		}
 
 		// Check if the VAA matches any of the filters
-		var found bool = false
+		found := false
 		for _, f := range fi {
 			if f.chainId == vaaMsg.EmitterChain && f.emitterAddr == vaaMsg.EmitterAddress {
 				found = true

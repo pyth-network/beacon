@@ -67,13 +67,19 @@ func main() {
 	go func() {
 		log.Info().Str("url", cli.MetricsURL).Msg("Starting metrics server")
 		http.Handle("/metrics", promhttp.Handler())
-		http.ListenAndServe(cli.MetricsURL, nil)
+		err := http.ListenAndServe(cli.MetricsURL, nil)
+		if err != nil {
+			log.Panic().Err(err).Msg("Failed to start metrics server")
+		}
 	}()
 
 	go func() {
 		log.Info().Str("url", cli.HeartbeatURL).Msg("Starting heartbeat server")
 		http.HandleFunc("/", heartbeat.Handle)
-		http.ListenAndServe(cli.HeartbeatURL, nil)
+		err := http.ListenAndServe(cli.HeartbeatURL, nil)
+		if err != nil {
+			log.Panic().Err(err).Msg("Failed to start heartbeat server")
+		}
 	}()
 
 	log.Info().Msg("Starting receive/write/serve goroutines")
