@@ -11,7 +11,7 @@ import (
 	"github.com/wormhole-foundation/wormhole/sdk/vaa"
 )
 
-func WriteMessages(channel chan *vaa.VAA, natsURL string, batchSize int) {
+func WriteMessages(channel chan *vaa.VAA, natsURL string, natsStream string, batchSize int) {
 	nc, err := nats.Connect(natsURL)
 
 	if err != nil {
@@ -24,16 +24,16 @@ func WriteMessages(channel chan *vaa.VAA, natsURL string, batchSize int) {
 		log.Panic().Err(err).Msg("Failed to create stream context")
 	}
 
-	stream, _ := js.StreamInfo(STREAM_NAME)
+	stream, _ := js.StreamInfo(natsStream)
 
 	if stream == nil {
 		_, err = js.AddStream(&nats.StreamConfig{
-			Name:     STREAM_NAME,
+			Name:     natsStream,
 			MaxBytes: 4_000_000_000,
 		})
 
 		if err != nil {
-			log.Panic().Err(err).Str("stream", STREAM_NAME).Msg("Failed to create stream")
+			log.Panic().Err(err).Str("stream", natsStream).Msg("Failed to create stream")
 		}
 	}
 
@@ -57,7 +57,7 @@ func WriteMessages(channel chan *vaa.VAA, natsURL string, batchSize int) {
 		signingDigest := message.SigningDigest().Hex()
 
 		_, err = js.PublishMsgAsync(&nats.Msg{
-			Subject: STREAM_NAME,
+			Subject: natsStream,
 			Header:  nats.Header{"Nats-Msg-Id": []string{signingDigest}},
 			Data:    bytes,
 		})
