@@ -24,7 +24,8 @@ type filterSignedVaa struct {
 
 type server struct {
 	spyv1.UnimplementedSpyRPCServiceServer
-	natsConn *nats.Conn
+	natsConn   *nats.Conn
+	natsStream string
 }
 
 func (s server) SubscribeSignedVAA(req *spyv1.SubscribeSignedVAARequest, server spyv1.SpyRPCService_SubscribeSignedVAAServer) error {
@@ -54,7 +55,7 @@ func (s server) SubscribeSignedVAA(req *spyv1.SubscribeSignedVAARequest, server 
 		log.Panic().Err(err).Msg("Failed to create stream context")
 	}
 
-	stream, err := js.Stream(ctx, STREAM_NAME)
+	stream, err := js.Stream(ctx, s.natsStream)
 
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to create stream object")
@@ -119,7 +120,7 @@ func (s server) SubscribeSignedVAA(req *spyv1.SubscribeSignedVAARequest, server 
 	}
 }
 
-func ServeMessages(serverURL, natsURL string) {
+func ServeMessages(serverURL, natsURL string, natsStream string) {
 	nc, err := nats.Connect(natsURL)
 
 	if err != nil {
@@ -133,7 +134,7 @@ func ServeMessages(serverURL, natsURL string) {
 	}
 
 	grpcServer := grpc.NewServer()
-	server := server{natsConn: nc}
+	server := server{natsConn: nc, natsStream: natsStream}
 
 	reflection.Register(grpcServer)
 	spyv1.RegisterSpyRPCServiceServer(grpcServer, server)

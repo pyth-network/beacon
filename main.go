@@ -20,6 +20,7 @@ var cli struct {
 	WormholeBootstrap []string `kong:"required,env='WORMHOLE_BOOTSTRAP',help='Bootstrap nodes to connect to.'"`
 	WormholeListen    []string `kong:"required,env='WORMHOLE_LISTEN',help='Addresses to listen on'"`
 	ServerURL         string   `kong:"required,env='SERVER_URL',help='gRPC server URL to bind'"`
+	NatsStream        string   `kong:"required,env='NATS_STREAM',help='NATS stream to use'"`
 	NatsURL           string   `kong:"required,env='NATS_URL',help='NATS URL to connect'"`
 	WriterBatchSize   int      `kong:"required,env='WRITER_BATCH_SIZE',default=100,help='Number of messages to batch'"`
 	LogLevel          string   `kong:"required,env='LOG_LEVEL',default=info,help='Log level'"`
@@ -27,8 +28,6 @@ var cli struct {
 	HeartbeatURL      string   `kong:"required,env='HEARTBEAT_URL',default=':9000',help='Heartbeat URL to bind'"`
 	HeartbeatInterval int      `kong:"required,env='HEARTBEAT_INTERVAL',default='10',help='Maximum time between heartbeats in seconds'"`
 }
-
-const STREAM_NAME = "VAAS"
 
 type Heartbeat struct {
 	// Timestamp is updated from the ReceiveMessages thread
@@ -84,8 +83,8 @@ func main() {
 
 	log.Info().Msg("Starting receive/write/serve goroutines")
 	go ReceiveMessages(channel, heartbeat, cli.WormholeNetworkID, cli.WormholeBootstrap, cli.WormholeListen)
-	go WriteMessages(channel, cli.NatsURL, cli.WriterBatchSize)
-	go ServeMessages(cli.ServerURL, cli.NatsURL)
+	go WriteMessages(channel, cli.NatsURL, cli.NatsStream, cli.WriterBatchSize)
+	go ServeMessages(cli.ServerURL, cli.NatsURL, cli.NatsStream)
 
 	// Interrupt on CTRL-C
 	done := make(chan os.Signal, 1)
