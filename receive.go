@@ -166,7 +166,9 @@ func ReceiveMessages(channel chan *vaa.VAA, heartbeat *Heartbeat, networkID stri
 				// Send message on channel, increment counter, and update heartbeat
 				channel <- vaa
 				messagesMetric.Inc()
-				heartbeat.Timestamp = vaa.Timestamp.Unix()
+				if vaa.Timestamp.Unix() > heartbeat.Timestamp {
+					heartbeat.Timestamp = vaa.Timestamp.Unix()
+				}
 
 				log.Debug().Str("id", vaa.MessageID()).Msg("Received message")
 			}
