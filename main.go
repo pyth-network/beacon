@@ -39,7 +39,7 @@ func (h *Heartbeat) Handle(w http.ResponseWriter, r *http.Request) {
 	lastHeartbeat := time.Unix(h.Timestamp, 0)
 	interval := time.Since(lastHeartbeat)
 
-	if interval < 5*time.Second {
+	if interval < time.Duration(h.Interval)*time.Second {
 		log.Debug().Dur("interval_ms", interval).Msg("Heartbeat succeeded")
 		w.WriteHeader(200)
 	} else {
