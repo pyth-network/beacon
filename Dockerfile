@@ -9,7 +9,7 @@ RUN go mod download
 COPY *.go ./
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux go build -o /beacon
+RUN CGO_ENABLED=1 GOOS=linux go build -o /beacon
 
 # Run
 CMD ["/beacon"]
