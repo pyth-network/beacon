@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
+	"time"
 
 	"github.com/certusone/wormhole/node/pkg/common"
 	"github.com/certusone/wormhole/node/pkg/p2p"
@@ -43,13 +45,26 @@ func ReceiveMessages(channel chan *vaa.VAA, heartbeat *Heartbeat, networkID, boo
 		Help: "Count of messages received from the p2p network",
 	})
 
-	// Ignore observations
+	messageLatencyMetric := promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "beacon_message_latency",
+		Help:    "Latency of messages received from the p2p network",
+		Buckets: []float64{0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 1, 1.3, 1.7, 2, 3, 5, 10, 20},
+	})
+
+	observationsMetric := promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "beacon_observations",
+		Help: "Count of observations received from the p2p network",
+	}, []string{"guardian"})
+
+	// Update metrics for observation to track guardians behaviour
 	go func() {
 		for {
 			select {
 			case <-rootCtx.Done():
 				return
-			case <-obsvC:
+			case o := <-obsvC:
+				guardian := hex.EncodeToString(o.Msg.Addr)
+				observationsMetric.WithLabelValues(guardian).Inc()
 			}
 		}
 	}()
@@ -84,6 +99,8 @@ func ReceiveMessages(channel chan *vaa.VAA, heartbeat *Heartbeat, networkID, boo
 				// Send message on channel, increment counter, and update heartbeat
 				channel <- vaa
 				messagesMetric.Inc()
+				messageLatencyMetric.Observe(time.Since(time.Unix(vaa.Timestamp.Unix(), 0)).Seconds())
+
 				if vaa.Timestamp.Unix() > heartbeat.Timestamp {
 					heartbeat.Timestamp = vaa.Timestamp.Unix()
 				}
