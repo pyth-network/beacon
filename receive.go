@@ -48,7 +48,7 @@ func ReceiveMessages(channel chan *vaa.VAA, heartbeat *Heartbeat, networkID, boo
 	messageLatencyMetric := promauto.NewHistogram(prometheus.HistogramOpts{
 		Name:    "beacon_message_latency",
 		Help:    "Latency of messages received from the p2p network",
-		Buckets: []float64{0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 1, 1.3, 1.7, 2, 3, 5, 10, 20},
+		Buckets: []float64{0.3, 0.7, 1, 1.3, 1.7, 2, 2.3, 2.7, 3, 3.5, 4, 5, 10, 20},
 	})
 
 	observationsMetric := promauto.NewCounterVec(prometheus.CounterOpts{
@@ -99,10 +99,16 @@ func ReceiveMessages(channel chan *vaa.VAA, heartbeat *Heartbeat, networkID, boo
 				// Send message on channel, increment counter, and update heartbeat
 				channel <- vaa
 				messagesMetric.Inc()
-				messageLatencyMetric.Observe(time.Since(time.Unix(vaa.Timestamp.Unix(), 0)).Seconds())
 
 				if vaa.Timestamp.Unix() > heartbeat.Timestamp {
 					heartbeat.Timestamp = vaa.Timestamp.Unix()
+
+					// Only count the latency for the newer messages. This will
+					// give a better indication of the lag in the network.
+					//
+					// Also, we might receive a single message multiple times and doing the check
+					// here is that we only count the latency once.
+					messageLatencyMetric.Observe(time.Since(time.Unix(vaa.Timestamp.Unix(), 0)).Seconds())
 				}
 
 				log.Debug().Str("id", vaa.MessageID()).Msg("Received message")
