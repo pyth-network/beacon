@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"encoding/hex"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/certusone/wormhole/node/pkg/common"
@@ -63,8 +65,19 @@ func ReceiveMessages(channel chan *vaa.VAA, heartbeat *Heartbeat, networkID, boo
 			case <-rootCtx.Done():
 				return
 			case o := <-obsvC:
-				guardian := hex.EncodeToString(o.Msg.Addr)
-				observationsMetric.WithLabelValues(guardian).Inc()
+				// A messageId has `chain/emittter/seq` format. We are only interested in the chainId.
+				// ChainId is a uint16 represented in base 10.
+				chainId, err := strconv.ParseUint(strings.Split(o.Msg.MessageId, "/")[0], 10, 16)
+
+				if err != nil {
+					log.Error().Err(err).Msg("Failed to parse chainId")
+					continue
+				}
+
+				if vaa.ChainID(chainId) == vaa.ChainIDPythNet {
+					guardian := hex.EncodeToString(o.Msg.Addr)
+					observationsMetric.WithLabelValues(guardian).Inc()
+				}
 			}
 		}
 	}()
