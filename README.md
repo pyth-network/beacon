@@ -34,3 +34,5 @@ Alternatively, you can use the Docker image of Beacon published [here](https://g
 For optimal performance, co-locate Beacon with the NATS server to minimize overal latency. Run multiple Beacon
 instances to increase availability and reduce latency, but be mindful that this will scale network traffic. Utilize the
 health check probe to monitor VAA latency and restart instances if they become unhealthy.
+
+# It works with Go v1.20.12 and older
