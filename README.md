@@ -14,7 +14,9 @@ includes a health check mechanism to detect and address high latency issues.
 
 # How to use Beacon?
 
-To run Beacon, install `nats-server` and then run it using this command:
+To run Beacon, you need to have Go v1.20.10 or older and `nats-server` installed.
+
+Run a NATS server using this command:
 
 ```shell
 nats-server --jetstream
@@ -35,4 +37,5 @@ For optimal performance, co-locate Beacon with the NATS server to minimize overa
 instances to increase availability and reduce latency, but be mindful that this will scale network traffic. Utilize the
 health check probe to monitor VAA latency and restart instances if they become unhealthy.
 
-# It works with Go v1.20.12 and older
+# Wormhole P2P configuration
+You can find the Wormhole peer-to-peer network configuration [here](https://docs.wormhole.com/wormhole/explore-wormhole/spy).
