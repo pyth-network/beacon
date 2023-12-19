@@ -96,8 +96,8 @@ github.com/buger/jsonparser v0.0.0-20181115193947-bf1c66bbce23/go.mod h1:bbYlZJ7
 github.com/cenkalti/backoff/v4 v4.2.0 h1:HN5dHm3WBOgndBH6E8V0q2jIYIR3s9yglV8k/+MN3u4=
 github.com/cenkalti/backoff/v4 v4.2.0/go.mod h1:Y3VNntkOUPxTVeUxJ/G5vcM//AlwfmyYozVcomhLiZE=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
-github.com/certusone/wormhole/node v0.0.0-20231102210507-4f9400ca3d6c h1:Fpbov1KTNpDqw5mPVQ1RADa4z3JJ3loMXf8JBa9aZiY=
-github.com/certusone/wormhole/node v0.0.0-20231102210507-4f9400ca3d6c/go.mod h1:Wnv48pOXu4Ia/s/yXIYmbl0eHibHu24JpfyvcrsIYog=
+github.com/certusone/wormhole/node v0.0.0-20231216001536-ac1716ea0114 h1:wZNLbO0MT3t9x6mupwQ5kc5fM8s255gIfbSgUscGRD0=
+github.com/certusone/wormhole/node v0.0.0-20231216001536-ac1716ea0114/go.mod h1:wlhF32xzJsQ79Jx34Eqk+7gkMiZgLryMXEInVP+shKQ=
 github.com/cespare/xxhash v1.1.0 h1:a6HrQnmkObjyL+Gs60czilIUGqrzKutQD6XZog3p+ko=
 github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghfAqPWnc=
 github.com/cespare/xxhash/v2 v2.1.1/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
@@ -747,8 +747,8 @@ github.com/warpfork/go-wish v0.0.0-20220906213052-39a1cc7a02d0 h1:GDDkbFiaK8jsSD
 github.com/warpfork/go-wish v0.0.0-20220906213052-39a1cc7a02d0/go.mod h1:x6AKhvSSexNrVSrViXSHUEbICjmGXhtgABaHIySUSGw=
 github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1 h1:EKhdznlJHPMoKr0XTrX+IlJs1LH3lyx2nfr1dOlZ79k=
 github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1/go.mod h1:8UvriyWtv5Q5EOgjHaSseUEdkQfvwFv1I/In/O2M9gc=
-github.com/wormhole-foundation/wormhole/sdk v0.0.0-20230918141706-a3df706b8a4c h1:ulo1RnrzHR43eNtsRchngv8+1Rj/twV9L/puvjjBr0o=
-github.com/wormhole-foundation/wormhole/sdk v0.0.0-20230918141706-a3df706b8a4c/go.mod h1:pE/jYet19kY4P3V6mE2+01zvEfxdyBqv6L6HsnSa5uc=
+github.com/wormhole-foundation/wormhole/sdk v0.0.0-20231216001536-ac1716ea0114 h1:ESFeJ4ebKiSJz415UvctoZ5DD/wRt09UtTwZhCxBgAw=
+github.com/wormhole-foundation/wormhole/sdk v0.0.0-20231216001536-ac1716ea0114/go.mod h1:pE/jYet19kY4P3V6mE2+01zvEfxdyBqv6L6HsnSa5uc=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=

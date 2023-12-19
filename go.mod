@@ -4,12 +4,12 @@ go 1.19
 
 require (
 	github.com/alecthomas/kong v0.8.0
-	github.com/certusone/wormhole/node v0.0.0-20231102210507-4f9400ca3d6c
+	github.com/certusone/wormhole/node v0.0.0-20231216001536-ac1716ea0114
 	github.com/libp2p/go-libp2p v0.29.2
 	github.com/nats-io/nats.go v1.29.0
 	github.com/prometheus/client_golang v1.16.0
 	github.com/rs/zerolog v1.30.0
-	github.com/wormhole-foundation/wormhole/sdk v0.0.0-20230918141706-a3df706b8a4c
+	github.com/wormhole-foundation/wormhole/sdk v0.0.0-20231216001536-ac1716ea0114
 	go.uber.org/zap v1.25.0
 	google.golang.org/grpc v1.57.0
 )
