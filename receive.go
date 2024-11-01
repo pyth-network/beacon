@@ -19,18 +19,38 @@ import (
 	"go.uber.org/zap"
 )
 
-func ReceiveMessages(channel chan *vaa.VAA, heartbeat *Heartbeat, networkID, bootstrapAddrs string, listenPort uint) {
+func ReceiveMessages(channel chan *vaa.VAA, heartbeat *Heartbeat, wormholeEnv, networkID, bootstrapAddrs string, listenPort uint) {
 	common.SetRestrictiveUmask()
 
 	// Node's main lifecycle context.
 	rootCtx, rootCtxCancel := context.WithCancel(context.Background())
 	defer rootCtxCancel()
 
-	// Outbound gossip message queue
-	sendC := make(chan []byte)
+	if wormholeEnv != "" {
+		// If env is set, networkId and bootstrapAddrs should not be set
+		if networkID != "" || bootstrapAddrs != "" {
+			log.Panic().Msg("Network ID and bootstrap addresses should not be set when wormhole env is set")
+		}
+
+		env, err := common.ParseEnvironment(wormholeEnv)
+		if err != nil || (env != common.MainNet && env != common.TestNet) {
+			log.Panic().Err(err).Msg("Invalid wormhole environment, should be 'mainnet' or 'testnet'")
+		}
+		networkID = p2p.GetNetworkId(env)
+		bootstrapAddrs, err = p2p.GetBootstrapPeers(env)
+
+		if err != nil {
+			log.Panic().Err(err).Msg("Failed to determine p2p bootstrap peers from env")
+		}
+	} else {
+		// If env is not set, networkId and bootstrapAddrs should be set
+		if networkID == "" || bootstrapAddrs == "" {
+			log.Panic().Msg("Network ID and bootstrap addresses should be set when wormhole env is not set")
+		}
+	}
 
 	// Inbound observations
-	obsvC := make(chan *common.MsgWithTimeStamp[gossipv1.SignedObservation], 1024)
+	obsvC := make(chan *common.MsgWithTimeStamp[gossipv1.SignedObservationBatch], 1024)
 
 	// Inbound observation requests
 	obsvReqC := make(chan *gossipv1.ObservationRequest, 1024)
@@ -64,19 +84,22 @@ func ReceiveMessages(channel chan *vaa.VAA, heartbeat *Heartbeat, networkID, boo
 			select {
 			case <-rootCtx.Done():
 				return
-			case o := <-obsvC:
-				// A messageId has `chain/emittter/seq` format. We are only interested in the chainId.
-				// ChainId is a uint16 represented in base 10.
-				chainId, err := strconv.ParseUint(strings.Split(o.Msg.MessageId, "/")[0], 10, 16)
+			case batchObservation := <-obsvC:
+				guardian := hex.EncodeToString(batchObservation.Msg.Addr)
 
-				if err != nil {
-					log.Error().Err(err).Msg("Failed to parse chainId")
-					continue
-				}
+				for _, observation := range batchObservation.Msg.Observations {
+					// A messageId has `chain/emittter/seq` format. We are only interested in the chainId.
+					// ChainId is a uint16 represented in base 10.
+					chainId, err := strconv.ParseUint(strings.Split(observation.MessageId, "/")[0], 10, 16)
 
-				if vaa.ChainID(chainId) == vaa.ChainIDPythNet {
-					guardian := hex.EncodeToString(o.Msg.Addr)
-					observationsMetric.WithLabelValues(guardian).Inc()
+					if err != nil {
+						log.Error().Err(err).Msg("Failed to parse chainId")
+						continue
+					}
+
+					if vaa.ChainID(chainId) == vaa.ChainIDPythNet {
+						observationsMetric.WithLabelValues(guardian).Inc()
+					}
 				}
 			}
 		}
@@ -145,35 +168,24 @@ func ReceiveMessages(channel chan *vaa.VAA, heartbeat *Heartbeat, networkID, boo
 	supervisor.New(rootCtx, logger, func(ctx context.Context) error {
 		components := p2p.DefaultComponents()
 		components.Port = listenPort
+		params, err := p2p.NewRunParams(
+			bootstrapAddrs,
+			networkID,
+			priv,
+			gst,
+			rootCtxCancel,
+			p2p.WithSignedVAAListener(signedInC),
+			p2p.WithSignedObservationBatchListener(obsvC),
+			p2p.WithComponents(components),
+		)
+
+		if err != nil {
+			return err
+		}
+
 		if err := supervisor.Run(ctx,
 			"p2p",
-			p2p.Run(obsvC,
-				obsvReqC,
-				nil,
-				sendC,
-				signedInC,
-				priv,
-				nil,
-				gst,
-				networkID,
-				bootstrapAddrs,
-				"",
-				false,
-				rootCtxCancel,
-				nil,
-				nil,
-				nil,
-				nil,
-				components,
-				nil,   // ibc feature string
-				false, // gateway relayer enabled
-				false, // ccqEnabled
-				nil,   // query requests
-				nil,   // query responses
-				"",    // query bootstrap peers
-				0,     // query port
-				"",    // query allow list
-			)); err != nil {
+			p2p.Run(params)); err != nil {
 			return err
 		}
 

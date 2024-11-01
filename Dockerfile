@@ -1,4 +1,4 @@
-FROM docker.io/golang:1.20.10-bullseye@sha256:082569b3303b164cc4a7c88ac59b19b69c1a5d662041ac0dca046ac239632442
+FROM docker.io/golang:1.21.9-bullseye@sha256:e249f1c6bcb9bf18a7fab1b78456f91f5e0e6be80f71485efb8b1e1a5c72f3db
 
 WORKDIR /app
 
