@@ -14,7 +14,7 @@ includes a health check mechanism to detect and address high latency issues.
 
 # How to use Beacon?
 
-To run Beacon, you need to have Go v1.20.10 or older and `nats-server` installed.
+To run Beacon, you need to have Go v1.21.9 or older and `nats-server` installed.
 
 Run a NATS server using this command:
 
