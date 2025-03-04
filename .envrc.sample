@@ -5,4 +5,4 @@ export NATS_STREAM=mainnet-vaas
 export SERVER_URL=127.0.0.1:7072
 export LOG_LEVEL=info
 export WRITER_BATCH_SIZE="1000"
-
+export NODE_KEY_PATH="./key"

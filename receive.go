@@ -19,7 +19,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func ReceiveMessages(channel chan *vaa.VAA, heartbeat *Heartbeat, wormholeEnv, networkID, bootstrapAddrs string, listenPort uint) {
+func ReceiveMessages(channel chan *vaa.VAA, heartbeat *Heartbeat, nodeKeyPath, wormholeEnv, networkID, bootstrapAddrs string, listenPort uint) {
 	common.SetRestrictiveUmask()
 
 	// Node's main lifecycle context.
@@ -152,16 +152,26 @@ func ReceiveMessages(channel chan *vaa.VAA, heartbeat *Heartbeat, wormholeEnv, n
 		}
 	}()
 
-	// Create a random private key
-	priv, _, err := crypto.GenerateKeyPair(crypto.Ed25519, -1)
-	if err != nil {
-		log.Panic().Err(err).Msg("Failed to create private key")
-	}
-
 	// TODO: use zap logger everywhere
 	logger, err := zap.NewProductionConfig().Build()
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to create logger")
+	}
+
+	priv := crypto.PrivKey(nil)
+
+	if nodeKeyPath == "" {
+		log.Info().Msg("No node key path provided, generating a new keypair")
+		priv, _, err = crypto.GenerateKeyPair(crypto.Ed25519, -1)
+		if err != nil {
+			log.Panic().Err(err).Msg("Failed to create private key")
+		}
+	} else {
+		log.Info().Str("path", nodeKeyPath).Msg("Using node key path")
+		priv, err = common.GetOrCreateNodeKey(logger, nodeKeyPath)
+		if err != nil {
+			log.Panic().Err(err).Msg("Failed to create private key")
+		}
 	}
 
 	// Run supervisor.
