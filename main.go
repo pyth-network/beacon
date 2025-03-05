@@ -16,7 +16,7 @@ import (
 )
 
 var cli struct {
-	NodeKeyPath        string `kong:"optional,env='NODE_KEY_PATH',help='Path to the node key. If set and key doesn't exists there it gets created. If not set, a new key will be generated'"`
+	NodeKeyPath        string `kong:"optional,env='NODE_KEY_PATH',help='Path to the node key. If set and key doesn not exists there it gets created. If not set, a new key will be generated'"`
 	WormholeEnv        string `kong:"optional,env='WORMHOLE_ENV',help='Wormhole environment (may be \"testnet\" or \"mainnet\") required if WORMHOLE_NETWORK_ID and WORMHOLE_BOOTSTRAP is not set'"`
 	WormholeNetworkID  string `kong:"optional,env='WORMHOLE_NETWORK_ID',help='Wormhole network ID, required if WORMHOLE_ENV is not set'"`
 	WormholeBootstrap  string `kong:"optional,env='WORMHOLE_BOOTSTRAP',help='Bootstrap nodes to connect to. Required if WORMHOLE_ENV is not set'"`
