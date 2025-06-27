@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -44,28 +45,29 @@ func WriteMessages(channel chan *vaa.VAA, natsURL string, natsStream string, bat
 		Help: "Latency (milliseconds) of batch acks from the stream server",
 	})
 
-	for message := range channel {
-		bytes, err := message.Marshal()
+	for vaa := range channel {
+		vaaBytes, err := vaa.Marshal()
 
 		if err != nil {
-			log.Panic().Err(err).Str("id", message.MessageID()).Msg("Failed to marshal VAA")
+			log.Panic().Err(err).Str("id", vaa.MessageID()).Msg("Failed to marshal VAA")
 		}
 
-		// Use the signing digest of the VAA as the NATS message ID to prevent
-		// DoS against valid messages by taking advantage of stream
-		// deduplication.
-		signingDigest := message.SigningDigest().Hex()
+		vaaHash := crypto.Keccak256Hash(vaaBytes).Hex()
 
 		_, err = js.PublishMsgAsync(&nats.Msg{
 			Subject: natsStream,
-			Header:  nats.Header{"Nats-Msg-Id": []string{signingDigest}},
-			Data:    bytes,
+			// This header allows dedup using the vaa hash
+			Header: nats.Header{"Nats-Msg-Id": []string{vaaHash}},
+			Data:   vaaBytes,
 		})
 
+		// Signing digest is the hash of the payload of the VAA
+		signingDigest := vaa.SigningDigest().Hex()
+
 		if err != nil {
-			log.Error().Str("id", message.MessageID()).Str("signing_digest", signingDigest).Err(err).Msg("Failed to publish message")
+			log.Error().Str("id", vaa.MessageID()).Str("signing_digest", signingDigest).Err(err).Msg("Failed to publish message")
 		} else {
-			log.Debug().Str("id", message.MessageID()).Str("signing_digest", signingDigest).Msg("Published message")
+			log.Debug().Str("id", vaa.MessageID()).Str("signing_digest", signingDigest).Msg("Published message")
 		}
 
 		batchCounter++
